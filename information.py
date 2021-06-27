@@ -18,7 +18,8 @@ class Information:
         print(f"information: {self.info}")
 
     def load(self):
-        if os.stat(self.file).st_size == 0:
+        if not os.path.isfile(self.file):
+            f = open(self.file, "x")
             self.info = {}
         else:
             with open(self.file, "r") as f:
