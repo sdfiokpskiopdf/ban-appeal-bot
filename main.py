@@ -124,9 +124,22 @@ async def start_appeal(user, server_id, server):
             server.text_channels, id=int(server_info["end_channel"])
         )
 
-        # continue here
+        embed = discord.Embed(
+            title="New Ban Appeal",
+            description=f"Name: {user.mention}\nID: {user.id}\n",
+            color=0xFF0000,
+        )
 
-        end_channel.send()
+        embed.set_thumbnail(url=user.avatar_url)
+
+        for i, qa in enumerate(answers):
+            embed.add_field(
+                name=f"Question {i+1}: {qa['question']}",
+                value=f"Answer: {qa['answer'][:400]}",
+                inline=False,
+            )
+
+        await end_channel.send(embed=embed)
 
         embed = discord.Embed(
             title="Answers submitted successfully",
@@ -134,7 +147,7 @@ async def start_appeal(user, server_id, server):
             color=0xFF0000,
         )
 
-        user.send(embed=embed)
+        await user.send(embed=embed)
 
     bot.running.remove(str(user.id))
 
@@ -151,7 +164,7 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_reaction_add(reaction, user):
-    if reaction.emoji == "🔴" and user.id != bot.user.id:
+    if reaction.emoji == "🔴" and user.id != bot.user.id and reaction.me:
         await reaction.remove(user)
         await start_appeal(user, reaction.message.guild.id, reaction.message.guild)
 
