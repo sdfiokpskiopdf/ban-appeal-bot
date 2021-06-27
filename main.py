@@ -1,57 +1,23 @@
-import asyncio
-from asyncio.tasks import wait_for
-import json
-import os
+from information import Information
 
+import asyncio
 import discord
 from discord.ext import commands
 from discord.ext.commands import Bot
 from discord.ext.commands import has_permissions
 
-
-class Information:
-    def __init__(self):
-        self.file = "information.json"
-        self.default_questions = [
-            "What is your discord username (e.g. User#0000)?",
-            "Why were you banned?",
-            "Did you deserve it?",
-            "What will you do to prevent getting banned again?",
-            "How long has it been since you were banned?",
-            "Any other information?",
-        ]
-        self.load()
-
-        print(f"information: {self.info}")
-
-    def load(self):
-        if os.stat(self.file).st_size == 0:
-            self.info = {}
-        else:
-            with open(self.file, "r") as f:
-                self.info = json.load(f)
-
-    def save(self):
-        with open(self.file, "w") as f:
-            json.dump(self.info, f, indent=4)
-
-    def create_server_info(self, server_id):
-        self.info[str(server_id)] = {"questions": self.default_questions, "running": []}
-
-        self.save()
-
-
 intents = discord.Intents.default()
 intents.members = True
 
 bot = Bot(command_prefix="$", intents=intents)
+bot.running = []
 TOKEN = open("token.txt").read()
 info = Information()
 
 
-async def start_appeal(user, server_id):
-    if str(user.id) not in info.info[str(server_id)]["running"]:
-        info.info[str(server_id)]["running"].append(str(user.id))
+async def start_appeal(user, server_id, server):
+    if str(user.id) not in bot.running:
+        bot.running.append(str(user.id))
     else:
         embed = discord.Embed(
             title=f"Ticket limit reached",
@@ -65,6 +31,7 @@ async def start_appeal(user, server_id):
 
     timeout = False
     server_info = info.info[str(server_id)]
+    answers = []
 
     def message_check(m):
 
@@ -118,7 +85,7 @@ async def start_appeal(user, server_id):
                 )
 
                 if reaction.emoji == "✅":
-
+                    answers.append({"question": question, "answer": msg.content})
                     break
                 elif reaction.emoji == "❌":
 
@@ -151,7 +118,25 @@ async def start_appeal(user, server_id):
 
             break
 
-    info.info[str(server_id)]["running"].remove(str(user.id))
+    if not timeout:
+
+        end_channel = discord.utils.get(
+            server.text_channels, id=int(server_info["end_channel"])
+        )
+
+        # continue here
+
+        end_channel.send()
+
+        embed = discord.Embed(
+            title="Answers submitted successfully",
+            description="Thanks for your appeal",
+            color=0xFF0000,
+        )
+
+        user.send(embed=embed)
+
+    bot.running.remove(str(user.id))
 
 
 @bot.event
@@ -168,7 +153,7 @@ async def on_guild_join(guild):
 async def on_reaction_add(reaction, user):
     if reaction.emoji == "🔴" and user.id != bot.user.id:
         await reaction.remove(user)
-        await start_appeal(user, reaction.message.guild.id)
+        await start_appeal(user, reaction.message.guild.id, reaction.message.guild)
 
 
 @bot.command()
