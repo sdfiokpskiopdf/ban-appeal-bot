@@ -1,5 +1,6 @@
 from information import Information
 
+import os
 import asyncio
 import discord
 from discord.ext import commands
@@ -120,6 +121,12 @@ async def start_appeal(user, server_id, server):
 
     if not timeout:
 
+        with open(os.path.join("answers", f"answer-{user.id}.txt"), "w") as f:
+            f.write("TRANSCRIPT:\n\n")
+            f.close()
+
+        f = open(f"answers/answer-{user.id}.txt", "a")
+
         end_channel = discord.utils.get(
             server.text_channels, id=int(server_info["end_channel"])
         )
@@ -133,13 +140,20 @@ async def start_appeal(user, server_id, server):
         embed.set_thumbnail(url=user.avatar_url)
 
         for i, qa in enumerate(answers):
+            f.write(f"Question {i+1}: {qa['question']}\n")
+            f.write(f"Answer: {qa['answer']}\n\n")
+
             embed.add_field(
                 name=f"Question {i+1}: {qa['question']}",
                 value=f"Answer: {qa['answer'][:400]}",
                 inline=False,
             )
 
-        await end_channel.send(embed=embed)
+        f.close()
+
+        discordf = discord.File(f"answers/answer-{user.id}.txt")
+
+        await end_channel.send(embed=embed, file=discordf)
 
         embed = discord.Embed(
             title="Answers submitted successfully",
